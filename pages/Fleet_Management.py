@@ -111,7 +111,7 @@ if fleet_df.empty:
     if not failure_df.empty:
         st.dataframe(
             failure_df,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
@@ -168,14 +168,21 @@ fleet_df = fleet_df.merge(
 )
 
 fleet_df["incident_count"] = (
-    fleet_df["incident_count"]
+    pd.to_numeric(
+        fleet_df["incident_count"],
+        errors="coerce",
+    )
     .fillna(0)
     .astype(int)
 )
 
 fleet_df["max_risk_score"] = (
-    fleet_df["max_risk_score"]
-    .fillna(0)
+    pd.to_numeric(
+        fleet_df["max_risk_score"],
+        errors="coerce",
+    )
+    .replace([np.inf, -np.inf], np.nan)
+    .fillna(0.0)
 )
 
 fleet_df["latest_incident"] = (
@@ -266,6 +273,26 @@ elif incident_filter == "Without incidents":
     filtered_df = filtered_df[
         filtered_df["incident_count"] == 0
     ]
+
+
+if filtered_df.empty:
+    st.warning(
+        "No batteries match the selected filters."
+    )
+    st.stop()
+
+
+filtered_df = filtered_df.copy()
+
+filtered_df["bubble_size"] = (
+    pd.to_numeric(
+        filtered_df["max_risk_score"],
+        errors="coerce",
+    )
+    .replace([np.inf, -np.inf], np.nan)
+    .fillna(0.0)
+    .clip(lower=5.0, upper=100.0)
+)
 
 
 healthy_count = int(
@@ -395,7 +422,7 @@ st.dataframe(
             True,
         ],
     ),
-    use_container_width=True,
+    width="stretch",
     hide_index=True,
 )
 
@@ -429,7 +456,7 @@ with chart_1:
 
     st.plotly_chart(
         soh_figure,
-        use_container_width=True,
+        width="stretch",
     )
 
 with chart_2:
@@ -437,18 +464,19 @@ with chart_2:
         filtered_df,
         x="soh_percent",
         y="incident_count",
-        size=np.maximum(
-            filtered_df[
-                "max_risk_score"
-            ],
-            5,
-        ),
+        size="bubble_size",
+        size_max=36,
         color="status",
         hover_name="battery_id",
+        hover_data={
+            "bubble_size": False,
+            "max_risk_score": True,
+        },
         title="Incidents vs Battery Health",
         labels={
             "soh_percent": "SOH (%)",
             "incident_count": "Incident Count",
+            "max_risk_score": "Maximum Risk Score",
         },
     )
 
@@ -458,7 +486,7 @@ with chart_2:
 
     st.plotly_chart(
         incident_figure,
-        use_container_width=True,
+        width="stretch",
     )
 
 
@@ -494,7 +522,7 @@ risk_figure.update_layout(
 
 st.plotly_chart(
     risk_figure,
-    use_container_width=True,
+    width="stretch",
 )
 
 
@@ -508,7 +536,7 @@ selected_battery = st.selectbox(
 )
 
 selected_row = filtered_df[
-    filtered_df["battery_id"]
+    filtered_df["battery_id"].astype(str)
     == selected_battery
 ].iloc[0]
 
@@ -594,7 +622,7 @@ if not incident_df.empty:
                 "generated_at",
                 ascending=False,
             ),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
     else:
@@ -621,7 +649,10 @@ else:
 
 st.download_button(
     "Download Fleet Snapshot CSV",
-    data=filtered_df.to_csv(
+    data=filtered_df.drop(
+        columns=["bubble_size"],
+        errors="ignore",
+    ).to_csv(
         index=False
     ).encode("utf-8"),
     file_name="battery_fleet_snapshot.csv",
@@ -635,6 +666,6 @@ if not failure_df.empty:
     ):
         st.dataframe(
             failure_df,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
