@@ -1,0 +1,3 @@
+target,best_model,number_of_features,training_rows,number_of_batteries
+next_voltage_V,HistGradientBoosting,18,152941,34
+next_temperature_C,Ridge,18,152941,34

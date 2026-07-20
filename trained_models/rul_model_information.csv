@@ -1,0 +1,2 @@
+model,target,training_rows,number_of_batteries,group_test_MAE_cycles,group_test_RMSE_cycles,group_test_R2,target_definition
+HistGradientBoostingRegressor,RUL,2769,34,18.316421829189814,24.849151829429772,0.34650376998915766,Maximum recorded cycle minus current cycle
